@@ -2,9 +2,9 @@ import os
 import openai
 import pyttsx3
 import pygame
-from playsound import playsound
+
 from concurrent.futures import ThreadPoolExecutor
-openai.api_key = "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"
+openai.api_key = "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"
 # Define the preprompt that sets the context for the AI
 preprompt = {"role": "system", "content": "You are a mascot called Willie the wildcat from K-state I want you to act like him and be knowledgeable about K-state. your personality is cheery, unformal, upbeat, you are not an AI language model, you are also sassy. Make your responses SHORT around 16 tokens"}
 

@@ -6,6 +6,7 @@ import gpt
 import keyboard
 import sheet
 import tts
+import queue
 import stt
 from time import sleep
 from collections import deque
@@ -26,7 +27,6 @@ def ai_submit(text):
     if text:  # Check if chat is not empty
         # Create a label with the chat and display it on top
         label = tk.Label(chat_frame, text="Willie: " + text, anchor='w', wraplength=300, fg="white", background='#710193', font=("Arial", 8)) 
-        label.pack(side='top', anchor='nw', pady=(5, 0))
         
         # Add the label to our tracking deque
         chat_labels.append(label)
@@ -40,6 +40,8 @@ def ai_submit(text):
         # Clear the text box for new input
         text_box.delete(0, tk.END)
         start_genAudio('Ethan',text)
+        label.pack(side='top', anchor='nw', pady=(5, 0))
+        tts.playAudio()
 # Handle the result of the chat function
 def handle_result(future):
     try:
@@ -183,7 +185,7 @@ def toggle_animation():
     if is_willie_talking:
         update_face(200)
         # Start a timer to stop talking after 5 seconds (5000 milliseconds)
-        root.after(5000, stop_talking)
+        #root.after(5000, stop_talking)
 
 def stop_talking():
     global is_willie_talking
@@ -316,7 +318,30 @@ def on_submit():
         text_box.delete(0, tk.END)
         
         start_chat(chat)
+        
 
+
+def speech(text):
+    
+    
+    if text:  # Check if chat is not empty
+        # Create a label with the chat and display it on top
+        label = tk.Label(chat_frame, text="You: "+text, anchor='w', wraplength=300, fg="white", background='#222222', font=("Calibri", 8))
+        label.pack(side='top', anchor='nw', pady=(5, 0))
+
+        # Add the label to our tracking deque
+        chat_labels.append(label)
+
+        # If we have too many labels, remove the first one
+        if len(chat_labels) > max_labels:
+            # Remove the oldest label from the frame and deque
+            oldest_label = chat_labels.popleft()
+            oldest_label.destroy()
+
+        # Clear the text box for new input
+        text_box.delete(0, tk.END)
+        
+        start_chat(text)
 
 # Button to submit the chat inside the input frame
 submit_button = tk.Button(input_frame, text=">", command=on_submit, fg="#ffffff", background='#710193', relief=tk.FLAT, borderwidth=0, highlightthickness=0, font=("Calibri", 8), width=3)
@@ -394,8 +419,20 @@ def start_chat(text):
 
 # Call start_chat after 0 milliseconds to start the process automatically
 #root.after(0, start_chat)
-main_thread = threading.Thread(target=stt.main)
-main_thread.start()
+def start_speech_to_text():
+    # ... get audio input ...
+    # Submit the STT task to the executor
+    future = executor.submit(stt.main)
+    future.add_done_callback(handle_stt_result)  # This will call handle_stt_result when STT is done
+
+def handle_stt_result(future):
+    try:
+        text = future.result()  # This will be your transcribed text
+        # Now you can use this text as needed, maybe call ai_submit(text)
+        
+        speech(text)
+    except Exception as e:
+        print(f"STT error: {e}")
 # Function to stop the program when 'q' is pressed
 def stop_all_threads():  # Add 'event=None' to allow the function to be called by a key binding
     # Shutdown the ThreadPoolExecutor
@@ -408,7 +445,7 @@ def stop_all_threads():  # Add 'event=None' to allow the function to be called b
     # Destroy the root Tkinter window to stop the program
     root.destroy()
 
-
+start_speech_to_text()
 # Start the moving towards target after a short delay
 root.after(100, move_towards_target)
 
