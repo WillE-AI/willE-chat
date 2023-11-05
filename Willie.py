@@ -6,7 +6,6 @@ import gpt
 import keyboard
 import sheet
 import tts
-import queue
 import stt
 from time import sleep
 from collections import deque
@@ -14,6 +13,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 faceindex = 3
 bodyindex = 1
+global willieVoice
+willieVoice = 'Bella'
 is_willie_talking = False
 is_walking = False
 def on_click(x, y, button, pressed):
@@ -25,8 +26,10 @@ def on_click(x, y, button, pressed):
 def ai_submit(text):
     
     if text:  # Check if chat is not empty
+        
         # Create a label with the chat and display it on top
         label = tk.Label(chat_frame, text="Willie: " + text, anchor='w', wraplength=300, fg="white", background='#710193', font=("Arial", 8)) 
+        label.pack(side='top', anchor='nw', pady=(5, 0))
         
         # Add the label to our tracking deque
         chat_labels.append(label)
@@ -39,9 +42,8 @@ def ai_submit(text):
 
         # Clear the text box for new input
         text_box.delete(0, tk.END)
-        start_genAudio('Ethan',text)
-        label.pack(side='top', anchor='nw', pady=(5, 0))
-        tts.playAudio()
+        print(willieVoice)
+        start_genAudio(willieVoice,text)
 # Handle the result of the chat function
 def handle_result(future):
     try:
@@ -55,9 +57,25 @@ def handle_result(future):
         print(f"Error retrieving the result: {e}")
 
 # It's better to create the executor outside of the on_click event
-executor = ThreadPoolExecutor(max_workers=1)
+executor = ThreadPoolExecutor(max_workers=3)
+def handle_stt_result(future2):
+    try:
+        text = future2.result()  # This will be your transcribed text
+        # Now you can use this text as needed, maybe call ai_submit(text)
+        speech(text)
+        #ai_submit(text)
+    except Exception as e:
+        print(f"STT error: {e}")
+def start_speech_to_text():
+    # ... get audio input ...
+    # Submit the STT task to the executor
+    print("Test")
+    future2 = executor.submit(stt.main)
+    future2.add_done_callback(handle_stt_result)  # This will call handle_stt_result when STT is done
+
 
   # Function to stop the program when 'q' is pressed
+start_speech_to_text()
 def stop_program(event):
     executor.shutdown(wait=False)
     root.destroy()
@@ -76,7 +94,27 @@ def stop_all_threads():
 # Listen for the 'q' key press and stop all threads when detected
 keyboard.add_hotkey('`', stop_all_threads)
 
+def speech(text):
+    
+    
+    if text:  # Check if chat is not empty
+        # Create a label with the chat and display it on top
+        label = tk.Label(chat_frame, text="You: "+text, anchor='w', wraplength=300, fg="white", background='#222222', font=("Calibri", 8))
+        label.pack(side='top', anchor='nw', pady=(5, 0))
 
+        # Add the label to our tracking deque
+        chat_labels.append(label)
+
+        # If we have too many labels, remove the first one
+        if len(chat_labels) > max_labels:
+            # Remove the oldest label from the frame and deque
+            oldest_label = chat_labels.popleft()
+            oldest_label.destroy()
+
+        # Clear the text box for new input
+        text_box.delete(0, tk.END)
+        
+        start_chat(text)
 
 def clean_alpha(image, threshold=200):
     """ Set all pixels with an alpha value below the threshold to fully transparent. """
@@ -185,7 +223,7 @@ def toggle_animation():
     if is_willie_talking:
         update_face(200)
         # Start a timer to stop talking after 5 seconds (5000 milliseconds)
-        #root.after(5000, stop_talking)
+        root.after(5000, stop_talking)
 
 def stop_talking():
     global is_willie_talking
@@ -253,6 +291,30 @@ new_window.title("Will-E")
 new_window.iconbitmap('faces/willE_icon.ico')  # Replace 'path_to_your_icon.ico' with the actual path to your icon file    
 new_window.geometry("300x300")  # width x height
 new_window.config(background="#222222")
+def selection_handler(selected):
+    global willieVoice 
+    print("You selected:", selected)
+    if (selected == "Willie 1"):
+        print("test")
+        willieVoice = 'Adam'
+        print(willieVoice)
+    if (selected == "Willie 2"):
+        willieVoice = 'Clyde'
+    if (selected == "Willie 3"):
+        willieVoice = 'Ethan'
+selected_option = tk.StringVar(new_window)
+
+# Set the default value of the dropdown
+selected_option.set("Option 1")
+
+# Options for the dropdown
+options = ["Willie 1","Willie 2","Willie 3"]
+
+# Create the dropdown menu
+dropdown = tk.OptionMenu(new_window, selected_option, *options, command=selection_handler)
+
+# Position the dropdown
+dropdown.pack(pady=20, padx=20)
 
 # Container frame for chat labels
 chat_frame = tk.Frame(new_window)
@@ -318,30 +380,7 @@ def on_submit():
         text_box.delete(0, tk.END)
         
         start_chat(chat)
-        
 
-
-def speech(text):
-    
-    
-    if text:  # Check if chat is not empty
-        # Create a label with the chat and display it on top
-        label = tk.Label(chat_frame, text="You: "+text, anchor='w', wraplength=300, fg="white", background='#222222', font=("Calibri", 8))
-        label.pack(side='top', anchor='nw', pady=(5, 0))
-
-        # Add the label to our tracking deque
-        chat_labels.append(label)
-
-        # If we have too many labels, remove the first one
-        if len(chat_labels) > max_labels:
-            # Remove the oldest label from the frame and deque
-            oldest_label = chat_labels.popleft()
-            oldest_label.destroy()
-
-        # Clear the text box for new input
-        text_box.delete(0, tk.END)
-        
-        start_chat(text)
 
 # Button to submit the chat inside the input frame
 submit_button = tk.Button(input_frame, text=">", command=on_submit, fg="#ffffff", background='#710193', relief=tk.FLAT, borderwidth=0, highlightthickness=0, font=("Calibri", 8), width=3)
@@ -419,20 +458,8 @@ def start_chat(text):
 
 # Call start_chat after 0 milliseconds to start the process automatically
 #root.after(0, start_chat)
-def start_speech_to_text():
-    # ... get audio input ...
-    # Submit the STT task to the executor
-    future = executor.submit(stt.main)
-    future.add_done_callback(handle_stt_result)  # This will call handle_stt_result when STT is done
-
-def handle_stt_result(future):
-    try:
-        text = future.result()  # This will be your transcribed text
-        # Now you can use this text as needed, maybe call ai_submit(text)
-        
-        speech(text)
-    except Exception as e:
-        print(f"STT error: {e}")
+#main_thread = threading.Thread(target=stt.main)
+#main_thread.start()
 # Function to stop the program when 'q' is pressed
 def stop_all_threads():  # Add 'event=None' to allow the function to be called by a key binding
     # Shutdown the ThreadPoolExecutor
@@ -445,7 +472,6 @@ def stop_all_threads():  # Add 'event=None' to allow the function to be called b
     # Destroy the root Tkinter window to stop the program
     root.destroy()
 
-start_speech_to_text()
 # Start the moving towards target after a short delay
 root.after(100, move_towards_target)
 

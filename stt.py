@@ -4,7 +4,7 @@ import soundfile as sf
 import keyboard
 
 # Replace with your OpenAI API key
-api_key = "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"
+api_key = "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"
 openai.api_key = api_key
 
 def transcribe_audio(audio_path):
