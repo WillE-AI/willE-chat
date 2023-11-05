@@ -4,7 +4,7 @@ import soundfile as sf
 import keyboard
 
 # Replace with your OpenAI API key
-api_key = "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"
+api_key = "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"
 openai.api_key = api_key
 
 def transcribe_audio(audio_path):
@@ -42,4 +42,3 @@ def main():
     except KeyboardInterrupt:
         print("\nRecording stopped.")
 
-main()

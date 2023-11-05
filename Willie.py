@@ -5,6 +5,8 @@ import threading
 import gpt
 import keyboard
 import sheet
+import tts
+import stt
 from time import sleep
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
@@ -37,6 +39,7 @@ def ai_submit(text):
 
         # Clear the text box for new input
         text_box.delete(0, tk.END)
+        start_genAudio('Ethan',text)
 # Handle the result of the chat function
 def handle_result(future):
     try:
@@ -208,17 +211,11 @@ speech_bubble_image = ImageOps.expand(speech_bubble_image, border=20, fill='whit
 speech_bubble_photo = ImageTk.PhotoImage(speech_bubble_image)
 
 # Create a Canvas and add the speech bubble image to it
-canvas = tk.Canvas(root, width=speech_bubble_image.width, height=speech_bubble_image.height, highlightthickness=0)
-#canvas.config(bg='')
-#canvas.pack()
+#new_window = tk.Toplevel()  or  new_window = tk.Tk()
 
-canvas.create_image(0, 0, anchor="nw", image=speech_bubble_photo)
+# Create a canvas and a scrollbar
 
-# Add a text object to the Canvas
-text_id = canvas.create_text(
-    speech_bubble_image.width // 2, speech_bubble_image.height // 2,
-    text="Your Text Here", font=('Helvetica', 16), fill='black'
-)
+
 
 # Remove the window decorations
 root.overrideredirect(True)
@@ -270,8 +267,32 @@ text_box.config(relief=tk.FLAT, borderwidth=0, highlightthickness=0)
 
 # Keep track of the chat labels
 chat_labels = deque()
-max_labels = 6  # Set the maximum number of labels
+max_labels = 20000000  # Set the maximum number of labels
+canvas = tk.Canvas(new_window)
+scrollbar = tk.Scrollbar(new_window, command=canvas.yview)
 
+# Configure canvas to use the scrollbar
+canvas.configure(yscrollcommand=scrollbar.set, background="#222222")
+
+
+# Pack scrollbar to the right, fill Y-axis
+scrollbar.pack(side='right', fill='y')
+
+# Pack canvas, fill both X and Y axis, and expand to fill space
+canvas.pack(side='left', fill='both', expand=True)
+
+# Create frame inside canvas
+chat_frame = tk.Frame(canvas, background='#222222')
+
+# Add frame to the canvas
+canvas.create_window((0, 0), window=chat_frame, anchor='nw')
+
+# Function to update the scrollregion of the canvas
+def configure_scrollregion(event):
+    canvas.configure(scrollregion=canvas.bbox('all'))
+
+# Bind the configure event of the frame to the function to update the scrollregion
+chat_frame.bind('<Configure>', configure_scrollregion)
 # Function to call when the button is clicked
 def on_submit():
     # Get the chat from the text box
@@ -309,7 +330,9 @@ root.bind('<Return>', enter_pressed)
 text_box.bind('<Return>', enter_pressed)
 
 
-
+def start_genAudio(voice, text):
+    audio_thread = threading.Thread(target=tts.genAudio, args=(voice, text))
+    audio_thread.start()
 # If we have too many labels, remove the first one
 
 def update_speech_bubble_text(text):
@@ -371,7 +394,8 @@ def start_chat(text):
 
 # Call start_chat after 0 milliseconds to start the process automatically
 #root.after(0, start_chat)
-
+main_thread = threading.Thread(target=stt.main)
+main_thread.start()
 # Function to stop the program when 'q' is pressed
 def stop_all_threads():  # Add 'event=None' to allow the function to be called by a key binding
     # Shutdown the ThreadPoolExecutor
@@ -379,6 +403,7 @@ def stop_all_threads():  # Add 'event=None' to allow the function to be called b
     
     # Stop the mouse listener
     listener.stop()
+    main_thread.stop()
     
     # Destroy the root Tkinter window to stop the program
     root.destroy()

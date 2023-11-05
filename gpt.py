@@ -4,7 +4,7 @@ import pyttsx3
 import pygame
 from playsound import playsound
 from concurrent.futures import ThreadPoolExecutor
-openai.api_key = "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"
+openai.api_key = "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"
 # Define the preprompt that sets the context for the AI
 preprompt = {"role": "system", "content": "You are a mascot called Willie the wildcat from K-state I want you to act like him and be knowledgeable about K-state. your personality is cheery, unformal, upbeat, you are not an AI language model, you are also sassy. Make your responses SHORT around 16 tokens"}
 
@@ -69,6 +69,7 @@ def chat_with_openai(user_input):
     )
    
     # Extract the AI's response and print it
+    print(conversation_history)
     ai_message = response['choices'][0]['message']['content']
    # print("AI:", ai_message)
     
@@ -89,6 +90,11 @@ def chat_with_openai(user_input):
         conversation_length -= len(removed_message["content"])
         print("Removed message to maintain length. New length (characters):", conversation_length)
     return ai_message
+    
+    
+def start_genAudio(voice, text):
+    audio_thread = threading.Thread(target=genAudio, args=(voice, text))
+    audio_thread.start()
 
 # Example conversation loop
 def chat(text):
